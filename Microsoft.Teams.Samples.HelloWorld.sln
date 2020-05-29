@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Teams.Samples.HelloWorld.Web", "Microsoft.Teams.Samples.HelloWorld.Web\Microsoft.Teams.Samples.HelloWorld.Web.csproj", "{783D6E6F-7339-4D74-89D4-B240496CC7A3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkflowService", "WorkflowService\WorkflowService.csproj", "{6172A06A-EC9D-477B-B7BF-5219F9EC33A2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{783D6E6F-7339-4D74-89D4-B240496CC7A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{783D6E6F-7339-4D74-89D4-B240496CC7A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{783D6E6F-7339-4D74-89D4-B240496CC7A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6172A06A-EC9D-477B-B7BF-5219F9EC33A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6172A06A-EC9D-477B-B7BF-5219F9EC33A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6172A06A-EC9D-477B-B7BF-5219F9EC33A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6172A06A-EC9D-477B-B7BF-5219F9EC33A2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

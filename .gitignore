@@ -8,6 +8,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+Microsoft.Teams.Samples.HelloWorld.Web/appsettings.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

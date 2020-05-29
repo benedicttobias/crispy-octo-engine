@@ -10,36 +10,119 @@ using System;
 using System.Collections.Generic;
 using Bogus;
 using Microsoft.Bot.Builder.AI.QnA;
+using Microsoft.Teams.Samples.HelloWorld.Web.Extensions;
+using Microsoft.Teams.Samples.HelloWorld.Web.Log;
+using WorkflowService;
+using Task = System.Threading.Tasks.Task;
 
 namespace Microsoft.Teams.Samples.HelloWorld.Web
 {
     public class MessageExtension : TeamsActivityHandler
     {
-        public QnAMaker DumbBotQnAMaker { get; private set; }
+        private readonly QnAMaker _dumbBotQnAMaker;
+        private readonly IWorkflowService _workflowService;
+        private readonly IStorage _storage;
 
-        public MessageExtension(QnAMakerEndpoint endpoint)
+        private const string UtteranceLogKey = "UTTERANCE_LOG";
+        private UtteranceLog _utteranceLog;
+
+        public MessageExtension(QnAMakerEndpoint endpoint, IWorkflowService workflowService, IStorage storage)
         {
-            DumbBotQnAMaker = new QnAMaker(endpoint);
+            _workflowService = workflowService;
+            _storage = storage;
+            _dumbBotQnAMaker = new QnAMaker(endpoint);
+            
         }
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
-            await AccessQnAMaker(turnContext, cancellationToken);
+            var utterance = turnContext.Activity.Text;
+
+            _utteranceLog = _storage.ReadAsync<UtteranceLog>(new[] { UtteranceLogKey }).Result.FirstOrDefault().Value;
+            if (_utteranceLog == null)
+            {
+                _utteranceLog = new UtteranceLog();
+            }
+
+            _utteranceLog.UtteranceList.Add(utterance);
+            var changes = new Dictionary<string, object>
+            {
+                {UtteranceLogKey, _utteranceLog }
+            };
+
+            await _storage.WriteAsync(changes, cancellationToken);
+
+            turnContext.Activity.RemoveRecipientMention();
+            var text = turnContext.Activity.Text.Trim().ToLower();
+
+            if (text.Contains("task", StringComparison.InvariantCultureIgnoreCase))
+            {
+                await GetTask(turnContext, cancellationToken);
+            }
+            else if (text.Contains("what?", StringComparison.InvariantCultureIgnoreCase))
+            {
+                await GetLastAnswer(turnContext, cancellationToken);
+            }
+            else
+            {
+                await AccessQnAMaker(turnContext, cancellationToken);
+            }
+        }
+
+        private async Task GetLastAnswer(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
+        {
+            var lastAnswer = _utteranceLog.UtteranceList.AsEnumerable().Reverse().Skip(1).Take(1).FirstOrDefault();
+            if (string.IsNullOrEmpty(lastAnswer))
+            {
+                lastAnswer = "I CANT HEAR YOU!";
+            }
+            else
+            {
+                lastAnswer = $"{lastAnswer.ToUpper()}!";
+            }
+            
+            var message = MessageFactory.Text(lastAnswer);
+            await turnContext.SendActivityAsync(message, cancellationToken);
+        }
+
+        private async Task GetTask(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
+        {
+            var card = _workflowService.GetTaskCard(turnContext.Activity.From.Name).ToHeroCard();
+            var answer = "You have one task...";
+
+            var message = MessageFactory.Text(answer);
+            message.Attachments.Add(card.ToAttachment());
+
+            _utteranceLog = _storage.ReadAsync<UtteranceLog>(new[] { UtteranceLogKey }).Result.FirstOrDefault().Value;
+            _utteranceLog.UtteranceList.Add(answer);
+            var changes = new Dictionary<string, object>
+            {
+                {UtteranceLogKey, _utteranceLog }
+            };
+            await _storage.WriteAsync(changes, cancellationToken);
+
+            await turnContext.SendActivityAsync(message, cancellationToken);
         }
 
         private async Task AccessQnAMaker(ITurnContext<IMessageActivity> turnContext,
             CancellationToken cancellationToken)
         {
-            var results = await DumbBotQnAMaker.GetAnswersAsync(turnContext);
-
+            var results = await _dumbBotQnAMaker.GetAnswersAsync(turnContext);
+            var answer = "I have no idea how to answer that. Sorry.";
             if (results.Any())
             {
-                await turnContext.SendActivityAsync(MessageFactory.Text(results.First().Answer), cancellationToken);
+                answer = results.First().Answer;
             }
-            else
+
+            _utteranceLog = _storage.ReadAsync<UtteranceLog>(new[] { UtteranceLogKey }).Result.FirstOrDefault().Value;
+            _utteranceLog.UtteranceList.Add(answer);
+            var changes = new Dictionary<string, object>
             {
-                await turnContext.SendActivityAsync(MessageFactory.Text("I have no idea how to answer that. Sorry."), cancellationToken);
-            }
+                {UtteranceLogKey, _utteranceLog }
+            };
+            await _storage.WriteAsync(changes, cancellationToken);
+
+            await turnContext.SendActivityAsync(MessageFactory.Text(answer), cancellationToken);
         }
 
         protected override Task<MessagingExtensionResponse> OnTeamsMessagingExtensionQueryAsync(ITurnContext<IInvokeActivity> turnContext, MessagingExtensionQuery query, CancellationToken cancellationToken)

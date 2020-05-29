@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Bot.Builder.AI.QnA;
+using WorkflowService;
 
 
 namespace Microsoft.Teams.Samples.HelloWorld.Web
@@ -41,6 +42,10 @@ namespace Microsoft.Teams.Samples.HelloWorld.Web
                 Host = Configuration.GetValue<string>($"QnAEndpointHostName")
             });
 
+            services.AddSingleton<IStorage, MemoryStorage>();
+
+            services.AddSingleton<IWorkflowService, WorkflowService.WorkflowService>();
+            
             // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.
             services.AddTransient<IBot, MessageExtension>();
         }
