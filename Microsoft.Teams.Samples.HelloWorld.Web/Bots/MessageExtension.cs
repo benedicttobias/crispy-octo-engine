@@ -9,18 +9,37 @@ using System.Linq;
 using System;
 using System.Collections.Generic;
 using Bogus;
+using Microsoft.Bot.Builder.AI.QnA;
 
 namespace Microsoft.Teams.Samples.HelloWorld.Web
 {
     public class MessageExtension : TeamsActivityHandler
     {
+        public QnAMaker DumbBotQnAMaker { get; private set; }
+
+        public MessageExtension(QnAMakerEndpoint endpoint)
+        {
+            DumbBotQnAMaker = new QnAMaker(endpoint);
+        }
+
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
-            turnContext.Activity.RemoveRecipientMention();
-            var text = turnContext.Activity.Text.Trim().ToLower();
+            await AccessQnAMaker(turnContext, cancellationToken);
+        }
 
-            var replyText = $"You said: {text}";
-            await turnContext.SendActivityAsync(MessageFactory.Text(replyText, replyText), cancellationToken);
+        private async Task AccessQnAMaker(ITurnContext<IMessageActivity> turnContext,
+            CancellationToken cancellationToken)
+        {
+            var results = await DumbBotQnAMaker.GetAnswersAsync(turnContext);
+
+            if (results.Any())
+            {
+                await turnContext.SendActivityAsync(MessageFactory.Text(results.First().Answer), cancellationToken);
+            }
+            else
+            {
+                await turnContext.SendActivityAsync(MessageFactory.Text("I have no idea how to answer that. Sorry."), cancellationToken);
+            }
         }
 
         protected override Task<MessagingExtensionResponse> OnTeamsMessagingExtensionQueryAsync(ITurnContext<IInvokeActivity> turnContext, MessagingExtensionQuery query, CancellationToken cancellationToken)
